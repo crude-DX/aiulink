@@ -176,7 +176,7 @@ function SearchResultDisplay({ query }: { query: string }) {
   
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-2">Searching for: <span className="text-primary">{query}</span></h2>
+      <h2 className="text-2xl font-bold mb-2">Searching for: <span className="text-[rgb(0,153,153)]">{query}</span></h2>
       <p className="text-muted-foreground mb-8">Follow the automated process as we retrieve and verify your answer.</p>
       
       <div className="relative">
@@ -204,7 +204,7 @@ function SearchResultDisplay({ query }: { query: string }) {
                   <div key={index} className="flex items-start gap-4">
                     <Icon className="h-6 w-6 text-accent mt-1 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-primary">{result.title}</p>
+                      <p className="font-semibold text-[rgb(0,153,153)]">{result.title}</p>
                       <p className="text-sm text-muted-foreground">{result.snippet}</p>
                     </div>
                   </div>
@@ -294,8 +294,8 @@ function SearchPage() {
         <div className="container flex h-20 items-center justify-between mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
-            <span className="hidden sm:inline-block text-xl font-bold font-headline text-primary">
-              InnoSearch
+            <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
+              AiU Link
             </span>
           </Link>
           <div className="flex-1 max-w-2xl">

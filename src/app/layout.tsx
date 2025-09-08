@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'InnoSearch',
+  title: 'AiU Link',
   description: 'Unified search for your internal knowledge base.',
 };
 

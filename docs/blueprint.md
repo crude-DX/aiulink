@@ -1,4 +1,4 @@
-# **App Name**: InnoSearch
+# **App Name**: AiU Link
 
 ## Core Features:
 
@@ -12,7 +12,7 @@
 
 ## Style Guidelines:
 
-- Primary color: HSL values of 210, 65%, 50%, represented in RGB hex as #3399E6, to suggest intelligence and information
+- Primary color: HSL values of 210, 65%, 50%, represented in RGB hex as #009999, to suggest intelligence and information
 - Background color: HSL values of 210, 20%, 95%, represented in RGB hex as #F0F8FF
 - Accent color: HSL values of 180, 50%, 40%, represented in RGB hex as #33BDBD for highlighting and calls to action.
 - Body and headline font: 'PT Sans', a humanist sans-serif that combines a modern look and a little warmth or personality; suitable for headlines or body text.
