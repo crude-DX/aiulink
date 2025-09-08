@@ -29,7 +29,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import React, { Suspense, useEffect, useState } from "react";
 
-type WorkflowStatus = "analyzing" | "searching" | "generating" | "confirming" | "feedback_submitted" | "error";
+type WorkflowStatus = "analyzing" | "searching" | "confirming" | "feedback_submitted" | "error";
 type StepStatus = "pending" | "loading" | "complete" | "error";
 
 interface MockSearchResult {
@@ -107,11 +107,11 @@ function SearchResultDisplay({ query }: { query: string }) {
         const intentResult = await analyzeSearchIntent({ query });
         if (isCancelled) return;
         setIntentData(intentResult);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 10));
         setWorkflowStatus("searching");
 
         // 2. Search Sources (Mock)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 10));
         if (isCancelled) return;
         const searchResults: MockSearchResult[] = intentResult.dataSources.map(source => ({
           source,
@@ -139,7 +139,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `지난달 PE 총 생산량 120,000톤 중 MI 지수 2.0 이상 제품은 36.5% (43,800톤)를 차지했습니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 1 Raw Data */ }
           });
         }
 
@@ -151,7 +150,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `이번 달 PP 총 판매량은 50,200톤이며, 재고는 4,500톤 감소했습니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 2 Raw Data */ }
           });
         }
 
@@ -163,7 +161,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `다음 주 CDU 정기보수로 인해 예상되는 총 생산 차질은 1,850톤입니다. (CDU: 1,600톤, PE: 250톤)`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 3 Raw Data */ }
           });
         }
 
@@ -175,7 +172,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `지난 분기 CDU 가동률은 기준 대비 3.1%p 하락한 87.2%를 기록했습니다. 주요 원인은 원유 성상(-1.8%p)과 유틸리티 비용(-0.9%p)입니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 4 Raw Data */ }
           });
         }
 
@@ -187,15 +183,11 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `올해 상반기 BOP-150N의 평균 단가는 톤당 985,000원으로, 전년 동기 대비 8.24% 상승했습니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 5 Raw Data */ }
           });
         }
         setMockSearchResults(searchResults);
-        setWorkflowStatus("generating");
         
-        // 3. Generate Draft Answer
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        if (isCancelled) return;
+        // 3. Generate Draft Answer and transition to final step
         const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
         const answerResult = await generateDraftAnswer({ query, searchResults: searchResultsText });
         if (isCancelled) return;
@@ -226,12 +218,20 @@ function SearchResultDisplay({ query }: { query: string }) {
 
   const getStepStatus = (step: number): StepStatus => {
     const statusMap: { [key in WorkflowStatus]: number } = {
-      analyzing: 1, searching: 2, generating: 3, confirming: 4, feedback_submitted: 4, error: 5,
+      analyzing: 1, searching: 2, confirming: 3, feedback_submitted: 3, error: 4,
     };
     const currentStep = statusMap[workflowStatus];
-    if (workflowStatus === 'error' && step === currentStep -1 ) return 'error';
+    
+    if (workflowStatus === 'error' && step === currentStep - 1 ) {
+        // Find which step failed. Analyzing is step 1, searching is 2.
+        if (intentData === null) return 'error'; // Analyzing failed
+        if (mockSearchResults.length === 0) return 'error'; // Searching failed
+        if (draftAnswer === null) return 'error'; // Generating failed (now part of confirming)
+    }
+
     if (step < currentStep) return "complete";
-    if (step === currentStep && workflowStatus !== 'error') return "loading";
+    if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted') return "loading";
+
     return "pending";
   };
   
@@ -276,15 +276,7 @@ function SearchResultDisplay({ query }: { query: string }) {
             )}
           </div>
         </WorkflowStep>
-
-        <WorkflowStep title="Generating Answer" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' && workflowStatus !== 'error'}>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        </WorkflowStep>
-
+        
         <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' || workflowStatus === 'feedback_submitted'}>
           {draftAnswer ? (
             <>
@@ -355,9 +347,9 @@ function SearchPage() {
         <div className="container flex h-20 items-center justify-between mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
-            <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
+            {/* <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
               AiU Link
-            </span>
+            </span> */}
           </Link>
           <div className="flex-1 max-w-2xl">
             <SearchBar initialQuery={query} />
