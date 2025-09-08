@@ -1,19 +1,15 @@
+import React from 'react';
+
 export const Icons = {
-  logo: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="rgb(0,153,153)"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+  logo: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    <img
+      src="/aiulink_icon.png"
+      alt="AIULink Logo"
+      style={{
+        transform: 'scaleX(1.8)', // 가로로 20% 늘리기
+        ...props.style
+      }}
       {...props}
-    >
-      <path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z" />
-      <path d="m21 21-5.2-5.2" />
-      <path d="M10.5 12H14l-2.5-3-2.5 3" />
-      <path d="M10.5 12v-2" />
-    </svg>
+    />
   ),
 };

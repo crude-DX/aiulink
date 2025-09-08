@@ -120,6 +120,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           updated: new Date().toISOString().split('T')[0],
           link: "#",
         }));
+        // AiU 의료비 관련 질문
         if (query.toLowerCase().includes("aiu 의료비")) {
           searchResults.push({
             source: "Knowledge Base",
@@ -127,7 +128,67 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: "AiU 의료비 자동화 보안 검토 절차는 정보보안팀의 가이드라인(DOC-SEC-1138)을 따릅니다. 담당자는 이보안(security.lee@example.com)입니다.",
             updated: "2024-03-15",
             link: "#"
-          })
+          });
+        }
+
+        // 1. PE 생산량 및 MI 지수 관련 질문
+        if (query.toLowerCase().includes("pe") && (query.toLowerCase().includes("생산량") || query.toLowerCase().includes("mi"))) {
+          searchResults.push({
+            source: "PE-Master",
+            title: "PE 생산량 및 MI 지수 분석",
+            snippet: `지난달 PE 총 생산량 120,000톤 중 MI 지수 2.0 이상 제품은 36.5% (43,800톤)를 차지했습니다.`,
+            updated: "2025-09-08",
+            link: "#",
+            rawData: { /* Case 1 Raw Data */ }
+          });
+        }
+
+        // 2. PP 판매 및 재고 관련 질문
+        if (query.toLowerCase().includes("pp") && (query.toLowerCase().includes("판매") || query.toLowerCase().includes("재고"))) {
+          searchResults.push({
+            source: "PP-Sales/Inventory",
+            title: "PP 판매 및 재고 현황",
+            snippet: `이번 달 PP 총 판매량은 50,200톤이며, 재고는 4,500톤 감소했습니다.`,
+            updated: "2025-09-08",
+            link: "#",
+            rawData: { /* Case 2 Raw Data */ }
+          });
+        }
+
+        // 3. CDU 정기보수로 인한 생산 차질 관련 질문
+        if (query.toLowerCase().includes("cdu") && (query.toLowerCase().includes("정기보수") || query.toLowerCase().includes("차질"))) {
+          searchResults.push({
+            source: "Analytics",
+            title: "CDU 정기보수 영향 분석",
+            snippet: `다음 주 CDU 정기보수로 인해 예상되는 총 생산 차질은 1,850톤입니다. (CDU: 1,600톤, PE: 250톤)`,
+            updated: "2025-09-08",
+            link: "#",
+            rawData: { /* Case 3 Raw Data */ }
+          });
+        }
+
+        // 4. CDU 가동률 원인 분석 관련 질문
+        if (query.toLowerCase().includes("cdu") && query.toLowerCase().includes("가동률") && (query.toLowerCase().includes("이유") || query.toLowerCase().includes("원인"))) {
+          searchResults.push({
+            source: "CDU-Dashboard",
+            title: "CDU 가동률 하락 원인 분석",
+            snippet: `지난 분기 CDU 가동률은 기준 대비 3.1%p 하락한 87.2%를 기록했습니다. 주요 원인은 원유 성상(-1.8%p)과 유틸리티 비용(-0.9%p)입니다.`,
+            updated: "2025-09-08",
+            link: "#",
+            rawData: { /* Case 4 Raw Data */ }
+          });
+        }
+
+        // 5. BOP 제품 단가 비교 관련 질문
+        if (query.toLowerCase().includes("bop") && (query.toLowerCase().includes("단가") || query.toLowerCase().includes("가격"))) {
+          searchResults.push({
+            source: "BOP-Pricing",
+            title: "BOP-150N 단가 비교 분석",
+            snippet: `올해 상반기 BOP-150N의 평균 단가는 톤당 985,000원으로, 전년 동기 대비 8.24% 상승했습니다.`,
+            updated: "2025-09-08",
+            link: "#",
+            rawData: { /* Case 5 Raw Data */ }
+          });
         }
         setMockSearchResults(searchResults);
         setWorkflowStatus("generating");
