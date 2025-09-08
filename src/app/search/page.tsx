@@ -107,11 +107,11 @@ function SearchResultDisplay({ query }: { query: string }) {
         const intentResult = await analyzeSearchIntent({ query });
         if (isCancelled) return;
         setIntentData(intentResult);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // await new Promise(resolve => setTimeout(resolve, 10));
         setWorkflowStatus("searching");
 
         // 2. Search Sources (Mock)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // await new Promise(resolve => setTimeout(resolve, 10));
         if (isCancelled) return;
         const searchResults: MockSearchResult[] = intentResult.dataSources.map(source => ({
           source,
@@ -139,7 +139,18 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `지난달 PE 총 생산량 120,000톤 중 MI 지수 2.0 이상 제품은 36.5% (43,800톤)를 차지했습니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: { /* Case 1 Raw Data */ }
+            rawData: {
+              "mi_threshold": 2.0,
+              "denominator_ton": 120000.0,
+              "numerator_ton": 43800.0,
+              "share_pct": 36.5,
+              "breakdown_by_grade": [
+                  { "grade": "PE-GA01", "production_ton": 28000, "mi_avg": 2.4, "is_ge_threshold": true },
+                  { "grade": "PE-GB11", "production_ton": 15800, "mi_avg": 2.1, "is_ge_threshold": true },
+                  { "grade": "PE-GC20", "production_ton": 36000, "mi_avg": 1.8, "is_ge_threshold": false },
+                  { "grade": "PE-GD42", "production_ton": 40200, "mi_avg": 1.7, "is_ge_threshold": false }
+              ]
+          }
           });
         }
 
@@ -194,7 +205,7 @@ function SearchResultDisplay({ query }: { query: string }) {
         setWorkflowStatus("generating");
         
         // 3. Generate Draft Answer
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // await new Promise(resolve => setTimeout(resolve, 10));
         if (isCancelled) return;
         const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
         const answerResult = await generateDraftAnswer({ query, searchResults: searchResultsText });
@@ -226,19 +237,18 @@ function SearchResultDisplay({ query }: { query: string }) {
 
   const getStepStatus = (step: number): StepStatus => {
     const statusMap: { [key in WorkflowStatus]: number } = {
-      analyzing: 1, searching: 2, generating: 3, confirming: 4, feedback_submitted: 4, error: 5,
+      analyzing: 1, searching: 2, generating: 3, confirming: 3, feedback_submitted: 3, error: 4,
     };
     const currentStep = statusMap[workflowStatus];
+    const errorStep = statusMap['error'];
 
     if (workflowStatus === 'error') {
-      const errorStep = Object.values(statusMap).find(v => v < 5) || 0;
-      if (step < errorStep) return 'complete';
-      if (step === errorStep) return 'error';
+      if (step < currentStep && step < errorStep) return 'complete';
+      if (step === currentStep && step < errorStep) return 'error';
       return 'pending';
     }
 
     if (step < currentStep) return "complete";
-    if (step === currentStep && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) return "complete";
     if (step === currentStep) return "loading";
     
     return "pending";
@@ -286,15 +296,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           </div>
         </WorkflowStep>
 
-        <WorkflowStep title="Generating Answer" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' && workflowStatus !== 'error'}>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        </WorkflowStep>
-
-        <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(4)} isVisible={getStepStatus(3) === 'complete' || workflowStatus === 'feedback_submitted'}>
+        <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' || workflowStatus === 'feedback_submitted'}>
           {draftAnswer ? (
             <>
               <div className="prose prose-sm max-w-none text-card-foreground">{draftAnswer}</div>
@@ -396,3 +398,5 @@ export default function SuspendedSearchPage() {
     </Suspense>
   )
 }
+
+    
