@@ -107,11 +107,11 @@ function SearchResultDisplay({ query }: { query: string }) {
         const intentResult = await analyzeSearchIntent({ query });
         if (isCancelled) return;
         setIntentData(intentResult);
-        // await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 500));
         setWorkflowStatus("searching");
 
         // 2. Search Sources (Mock)
-        // await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         if (isCancelled) return;
         const searchResults: MockSearchResult[] = intentResult.dataSources.map(source => ({
           source,
@@ -139,18 +139,7 @@ function SearchResultDisplay({ query }: { query: string }) {
             snippet: `지난달 PE 총 생산량 120,000톤 중 MI 지수 2.0 이상 제품은 36.5% (43,800톤)를 차지했습니다.`,
             updated: "2025-09-08",
             link: "#",
-            rawData: {
-              "mi_threshold": 2.0,
-              "denominator_ton": 120000.0,
-              "numerator_ton": 43800.0,
-              "share_pct": 36.5,
-              "breakdown_by_grade": [
-                  { "grade": "PE-GA01", "production_ton": 28000, "mi_avg": 2.4, "is_ge_threshold": true },
-                  { "grade": "PE-GB11", "production_ton": 15800, "mi_avg": 2.1, "is_ge_threshold": true },
-                  { "grade": "PE-GC20", "production_ton": 36000, "mi_avg": 1.8, "is_ge_threshold": false },
-                  { "grade": "PE-GD42", "production_ton": 40200, "mi_avg": 1.7, "is_ge_threshold": false }
-              ]
-          }
+            rawData: { /* Case 1 Raw Data */ }
           });
         }
 
@@ -205,7 +194,7 @@ function SearchResultDisplay({ query }: { query: string }) {
         setWorkflowStatus("generating");
         
         // 3. Generate Draft Answer
-        // await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         if (isCancelled) return;
         const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
         const answerResult = await generateDraftAnswer({ query, searchResults: searchResultsText });
@@ -237,20 +226,12 @@ function SearchResultDisplay({ query }: { query: string }) {
 
   const getStepStatus = (step: number): StepStatus => {
     const statusMap: { [key in WorkflowStatus]: number } = {
-      analyzing: 1, searching: 2, generating: 3, confirming: 3, feedback_submitted: 3, error: 4,
+      analyzing: 1, searching: 2, generating: 3, confirming: 4, feedback_submitted: 4, error: 5,
     };
     const currentStep = statusMap[workflowStatus];
-    const errorStep = statusMap['error'];
-
-    if (workflowStatus === 'error') {
-      if (step < currentStep && step < errorStep) return 'complete';
-      if (step === currentStep && step < errorStep) return 'error';
-      return 'pending';
-    }
-
+    if (workflowStatus === 'error' && step === currentStep -1 ) return 'error';
     if (step < currentStep) return "complete";
-    if (step === currentStep) return "loading";
-    
+    if (step === currentStep && workflowStatus !== 'error') return "loading";
     return "pending";
   };
   
@@ -293,6 +274,14 @@ function SearchResultDisplay({ query }: { query: string }) {
             ) : (
               intentData?.dataSources.map(source => <Skeleton key={source} className="h-16 w-full" />)
             )}
+          </div>
+        </WorkflowStep>
+
+        <WorkflowStep title="Generating Answer" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' && workflowStatus !== 'error'}>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         </WorkflowStep>
 
@@ -366,9 +355,9 @@ function SearchPage() {
         <div className="container flex h-20 items-center justify-between mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
-            {/* <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
+            <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
               AiU Link
-            </span> */}
+            </span>
           </Link>
           <div className="flex-1 max-w-2xl">
             <SearchBar initialQuery={query} />
@@ -398,5 +387,3 @@ export default function SuspendedSearchPage() {
     </Suspense>
   )
 }
-
-    
