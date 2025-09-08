@@ -229,9 +229,18 @@ function SearchResultDisplay({ query }: { query: string }) {
       analyzing: 1, searching: 2, generating: 3, confirming: 4, feedback_submitted: 4, error: 5,
     };
     const currentStep = statusMap[workflowStatus];
-    if (workflowStatus === 'error' && step === currentStep -1 ) return 'error';
+
+    if (workflowStatus === 'error') {
+      const errorStep = Object.values(statusMap).find(v => v < 5) || 0;
+      if (step < errorStep) return 'complete';
+      if (step === errorStep) return 'error';
+      return 'pending';
+    }
+
     if (step < currentStep) return "complete";
-    if (step === currentStep && workflowStatus !== 'error') return "loading";
+    if (step === currentStep && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) return "complete";
+    if (step === currentStep) return "loading";
+    
     return "pending";
   };
   
@@ -355,9 +364,9 @@ function SearchPage() {
         <div className="container flex h-20 items-center justify-between mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
-            <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
+            {/* <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
               AiU Link
-            </span>
+            </span> */}
           </Link>
           <div className="flex-1 max-w-2xl">
             <SearchBar initialQuery={query} />
