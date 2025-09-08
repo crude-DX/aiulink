@@ -8,7 +8,6 @@ export default function Home() {
         <Icons.logo className="h-20 w-20 text-primary" />
         <h1 className="text-5xl font-headline font-bold tracking-tight sm:text-6xl"
   style={{ color: 'rgb(0, 153, 153)' }}>
-          AiU Link
         </h1>
         <p className="text-lg text-muted-foreground md:text-xl">
           우리 회사 데이터는 어떤게 있을까?

@@ -6,7 +6,7 @@ export const Icons = {
       src="/logo.png"
       alt="AIULink Logo"
       style={{
-        transform: 'scaleX(2)', // 가로로 20% 늘리기
+        transform: 'scaleX(3.6) scaleY(1.8)', // 가로로 20% 늘리기
         ...props.style
       }}
       {...props}
