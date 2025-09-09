@@ -1,4 +1,3 @@
-
 "use client";
 
 import { analyzeSearchIntent, AnalyzeSearchIntentOutput } from "@/ai/flows/analyze-search-intent";
@@ -45,6 +44,11 @@ const sourceIcons: { [key: string]: React.ElementType } = {
   Database: Database,
   API: Share2,
   "File System": FolderKanban,
+  "PE-Master": Database,
+  "PP-Sales/Inventory": Database,
+  "Analytics": Database,
+  "CDU-Dashboard": Database,
+  "BOP-Pricing": Database,
   default: FileText,
 };
 
@@ -120,8 +124,10 @@ function SearchResultDisplay({ query }: { query: string }) {
           updated: new Date().toISOString().split('T')[0],
           link: "#",
         }));
+
+        // Mock 데이터 처리
         if (query.toLowerCase().includes("aiu 의료비")) {
-          searchResults = []; // Clear existing results
+          searchResults = [];
           searchResults.push({
             source: "Knowledge Base",
             title: "AiU 의료비 자동화 보안 검토 절차",
@@ -131,7 +137,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("pe") && (query.toLowerCase().includes("생산량") || query.toLowerCase().includes("mi"))) {
-          searchResults = []; // Clear existing results
+          searchResults = [];
           searchResults.push({
             source: "PE-Master",
             title: "PE 생산량 및 MI 지수 분석",
@@ -141,7 +147,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("pp") && (query.toLowerCase().includes("판매") || query.toLowerCase().includes("재고"))) {
-          searchResults = []; // Clear existing results
+          searchResults = [];
           searchResults.push({
             source: "PP-Sales/Inventory",
             title: "PP 판매 및 재고 현황",
@@ -151,7 +157,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("cdu") && (query.toLowerCase().includes("정기보수") || query.toLowerCase().includes("차질"))) {
-          searchResults = []; // Clear existing results
+          searchResults = [];
           searchResults.push({
             source: "Analytics",
             title: "CDU 정기보수 영향 분석",
@@ -161,7 +167,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("cdu") && query.toLowerCase().includes("가동률") && (query.toLowerCase().includes("이유") || query.toLowerCase().includes("원인"))) {
-          searchResults = []; // Clear existing results
+          searchResults = [];
           searchResults.push({
             source: "CDU-Dashboard",
             title: "CDU 가동률 하락 원인 분석",
@@ -180,13 +186,14 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#",
           });
         }
+
         setMockSearchResults(searchResults);
         setWorkflowStatus("confirming");
         
-        // 3. Generate Draft Answer
-        const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
+// 3. Generate Draft Answer - snippet 기반으로 직접 사용
+        const rawAnswer = searchResults.map(r => r.snippet).join('\n\n');
+        const answer = rawAnswer;
         
-        const {answer} = await generateDraftAnswer({ query, searchResults: searchResultsText });
         if (isCancelled) return;
         setDraftAnswer(answer);
 
@@ -281,8 +288,12 @@ function SearchResultDisplay({ query }: { query: string }) {
         <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' || workflowStatus === 'feedback_submitted'}>
           {draftAnswer !== null && draftAnswer !== "" ? (
             <>
-              <div className="prose prose-sm max-w-none text-card-foreground">
-                {draftAnswer}
+              <div className="prose prose-sm max-w-none text-card-foreground [&_strong]:text-[rgb(0,153,153)] [&_strong]:font-semibold">
+                <div dangerouslySetInnerHTML={{ 
+                  __html: draftAnswer
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br/>')
+                }} />
               </div>
               
               {(workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted') && draftAnswer && (
