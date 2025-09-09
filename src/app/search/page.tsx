@@ -1,7 +1,8 @@
+
 "use client";
 
 import { analyzeSearchIntent, AnalyzeSearchIntentOutput } from "@/ai/flows/analyze-search-intent";
-import { generateDraftAnswer, generateDraftAnswerStream } from "@/ai/flows/generate-draft-answer";
+import { generateDraftAnswer } from "@/ai/flows/generate-draft-answer";
 import { Icons } from "@/components/icons";
 import { SearchBar } from "@/components/search-bar";
 import { Badge } from "@/components/ui/badge";
@@ -112,7 +113,7 @@ function SearchResultDisplay({ query }: { query: string }) {
         // 2. Search Sources (Mock)
         await new Promise(resolve => setTimeout(resolve, 10));
         if (isCancelled) return;
-        const searchResults: MockSearchResult[] = intentResult.dataSources.map(source => ({
+        let searchResults: MockSearchResult[] = intentResult.dataSources.map(source => ({
           source,
           title: `Relevant Document from ${source}`,
           snippet: `This is a mock search result for the query "${query}" from the ${source}. It contains relevant keywords and information.`,
@@ -120,6 +121,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           link: "#",
         }));
         if (query.toLowerCase().includes("aiu 의료비")) {
+          searchResults = []; // Clear existing results
           searchResults.push({
             source: "Knowledge Base",
             title: "AiU 의료비 자동화 보안 검토 절차",
@@ -129,6 +131,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("pe") && (query.toLowerCase().includes("생산량") || query.toLowerCase().includes("mi"))) {
+          searchResults = []; // Clear existing results
           searchResults.push({
             source: "PE-Master",
             title: "PE 생산량 및 MI 지수 분석",
@@ -138,6 +141,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("pp") && (query.toLowerCase().includes("판매") || query.toLowerCase().includes("재고"))) {
+          searchResults = []; // Clear existing results
           searchResults.push({
             source: "PP-Sales/Inventory",
             title: "PP 판매 및 재고 현황",
@@ -147,6 +151,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("cdu") && (query.toLowerCase().includes("정기보수") || query.toLowerCase().includes("차질"))) {
+          searchResults = []; // Clear existing results
           searchResults.push({
             source: "Analytics",
             title: "CDU 정기보수 영향 분석",
@@ -156,6 +161,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("cdu") && query.toLowerCase().includes("가동률") && (query.toLowerCase().includes("이유") || query.toLowerCase().includes("원인"))) {
+          searchResults = []; // Clear existing results
           searchResults.push({
             source: "CDU-Dashboard",
             title: "CDU 가동률 하락 원인 분석",
@@ -179,23 +185,9 @@ function SearchResultDisplay({ query }: { query: string }) {
         // 3. Generate Draft Answer
         const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
         
-        const stream = await generateDraftAnswerStream({ query, searchResults: searchResultsText });
-        const reader = stream.getReader();
-        const decoder = new TextDecoder();
-        
-        let done = false;
-        while (!done) {
-          if(isCancelled) {
-            reader.cancel();
-            break;
-          }
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          if (value) {
-            const chunk = decoder.decode(value, { stream: true });
-            setDraftAnswer(prev => (prev || "") + chunk);
-          }
-        }
+        const {answer} = await generateDraftAnswer({ query, searchResults: searchResultsText });
+        if (isCancelled) return;
+        setDraftAnswer(answer);
 
       } catch (e) {
         if (isCancelled) return;
@@ -232,10 +224,10 @@ function SearchResultDisplay({ query }: { query: string }) {
     
     if (step < currentStep) return "complete";
 
-    if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted') return "loading";
+    if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted' && workflowStatus !== 'confirming') return "loading";
 
     if(step === 3 && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) {
-      return 'complete';
+      return draftAnswer ? 'complete' : 'loading';
     }
 
     return "pending";
@@ -286,11 +278,10 @@ function SearchResultDisplay({ query }: { query: string }) {
         </WorkflowStep>
         
         <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' || workflowStatus === 'feedback_submitted'}>
-          {draftAnswer !== null ? (
+          {draftAnswer !== null && draftAnswer !== "" ? (
             <>
               <div className="prose prose-sm max-w-none text-card-foreground">
                 {draftAnswer}
-                {getStepStatus(3) === 'loading' && <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-1"></span>}
               </div>
               
               {(workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted') && draftAnswer && (
@@ -394,3 +385,5 @@ export default function SuspendedSearchPage() {
     </Suspense>
   )
 }
+
+    
