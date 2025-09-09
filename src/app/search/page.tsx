@@ -228,6 +228,11 @@ function SearchResultDisplay({ query }: { query: string }) {
         if (mockSearchResults.length === 0) return 'error'; // Searching failed
         if (draftAnswer === null) return 'error'; // Generating failed (now part of confirming)
     }
+    
+    // ✅ 이 줄을 추가하세요
+    if (step === 3 && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) {
+      return 'complete';
+    }
 
     if (step < currentStep) return "complete";
     if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted') return "loading";
