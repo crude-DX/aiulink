@@ -34,7 +34,20 @@ Based on the User Query, generate a concise and informative answer in Korean usi
 - Answer the User Query precisely.
 - Do not include any introductory or concluding remarks.
 - Do not include source information or links.
-- If the Search Results are irrelevant to the User Query, state that you cannot answer the question with the provided information.`;
+- If the Search Results are irrelevant to the User Query, state that you cannot answer the question with the provided information.
+
+Example:
+User Query: "지난달 PE 생산량 중에서 MI 지수 2 이상 비중이 몇 퍼센트였어?"
+Search Results:
+Source: PE-Master
+Title: PE 생산량 및 MI 지수 분석
+Snippet: 지난달 PE 총 생산량 120,000톤 중 MI 지수 2.0 이상 제품은 36.5% (43,800톤)를 차지했습니다.
+
+Answer:
+{
+  "answer": "지난달 PE 총 생산량 중 MI 지수 2.0 이상 제품은 36.5%를 차지했습니다."
+}
+`;
 
 export async function generateDraftAnswer(input: GenerateDraftAnswerInput): Promise<GenerateDraftAnswerOutput> {
   const {output} = await ai.generate({
