@@ -4,6 +4,7 @@
  * @fileOverview A flow to generate a draft answer based on search results.
  *
  * - generateDraftAnswer - A function that generates a draft answer from search results.
+ * - generateDraftAnswerStream - A streaming version of the answer generation.
  * - GenerateDraftAnswerInput - The input type for the generateDraftAnswer function.
  * - GenerateDraftAnswerOutput - The return type for the generateDraftAnswer function.
  */
@@ -22,15 +23,7 @@ const GenerateDraftAnswerOutputSchema = z.object({
 });
 export type GenerateDraftAnswerOutput = z.infer<typeof GenerateDraftAnswerOutputSchema>;
 
-export async function generateDraftAnswer(input: GenerateDraftAnswerInput): Promise<GenerateDraftAnswerOutput> {
-  return generateDraftAnswerFlow(input);
-}
-
-const generateDraftAnswerPrompt = ai.definePrompt({
-  name: 'generateDraftAnswerPrompt',
-  input: {schema: GenerateDraftAnswerInputSchema},
-  output: {schema: GenerateDraftAnswerOutputSchema},
-  prompt: `You are an AI assistant that generates a draft answer based on the search results for a given query.
+const generateDraftAnswerPrompt = `You are an AI assistant that generates a draft answer based on the search results for a given query.
 
   Query: {{{query}}}
   Search Results: {{{searchResults}}}
@@ -40,17 +33,37 @@ const generateDraftAnswerPrompt = ai.definePrompt({
   Do not include any introductory or concluding sentences.
   Focus on answering the question directly.
   If the search results are irrelevant, state that you cannot answer the question with the provided information.
-  `,
-});
+  `;
 
-const generateDraftAnswerFlow = ai.defineFlow(
-  {
-    name: 'generateDraftAnswerFlow',
-    inputSchema: GenerateDraftAnswerInputSchema,
-    outputSchema: GenerateDraftAnswerOutputSchema,
-  },
-  async input => {
-    const {output} = await generateDraftAnswerPrompt(input);
-    return output!;
-  }
-);
+export async function generateDraftAnswer(input: GenerateDraftAnswerInput): Promise<GenerateDraftAnswerOutput> {
+  const {output} = await ai.generate({
+    model: 'googleai/gemini-2.5-flash',
+    prompt: generateDraftAnswerPrompt,
+    input: input,
+    output: {
+      format: 'json',
+      schema: GenerateDraftAnswerOutputSchema
+    }
+  });
+  return output!;
+}
+
+export async function generateDraftAnswerStream(input: GenerateDraftAnswerInput): Promise<ReadableStream<string>> {
+  const {stream} = ai.generateStream({
+    model: 'googleai/gemini-2.5-flash',
+    prompt: generateDraftAnswerPrompt,
+    input: input,
+  });
+
+  const encoder = new TextEncoder();
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of stream) {
+        controller.enqueue(encoder.encode(chunk.text));
+      }
+      controller.close();
+    },
+  });
+
+  return readableStream;
+}

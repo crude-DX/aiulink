@@ -1,7 +1,7 @@
 "use client";
 
 import { analyzeSearchIntent, AnalyzeSearchIntentOutput } from "@/ai/flows/analyze-search-intent";
-import { generateDraftAnswer } from "@/ai/flows/generate-draft-answer";
+import { generateDraftAnswerStream } from "@/ai/flows/generate-draft-answer";
 import { Icons } from "@/components/icons";
 import { SearchBar } from "@/components/search-bar";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
-  Check,
   CheckCircle2,
   ChevronRight,
   Database,
@@ -100,7 +99,7 @@ function SearchResultDisplay({ query }: { query: string }) {
         setError(null);
         setIntentData(null);
         setMockSearchResults([]);
-        setDraftAnswer(null);
+        setDraftAnswer("");
         setUserFeedback(null);
 
         // 1. Analyze Intent
@@ -120,7 +119,6 @@ function SearchResultDisplay({ query }: { query: string }) {
           updated: new Date().toISOString().split('T')[0],
           link: "#",
         }));
-        // AiU 의료비 관련 질문
         if (query.toLowerCase().includes("aiu 의료비")) {
           searchResults.push({
             source: "Knowledge Base",
@@ -130,8 +128,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#"
           });
         }
-
-        // 1. PE 생산량 및 MI 지수 관련 질문
         if (query.toLowerCase().includes("pe") && (query.toLowerCase().includes("생산량") || query.toLowerCase().includes("mi"))) {
           searchResults.push({
             source: "PE-Master",
@@ -141,8 +137,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#",
           });
         }
-
-        // 2. PP 판매 및 재고 관련 질문
         if (query.toLowerCase().includes("pp") && (query.toLowerCase().includes("판매") || query.toLowerCase().includes("재고"))) {
           searchResults.push({
             source: "PP-Sales/Inventory",
@@ -152,8 +146,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#",
           });
         }
-
-        // 3. CDU 정기보수로 인한 생산 차질 관련 질문
         if (query.toLowerCase().includes("cdu") && (query.toLowerCase().includes("정기보수") || query.toLowerCase().includes("차질"))) {
           searchResults.push({
             source: "Analytics",
@@ -163,8 +155,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#",
           });
         }
-
-        // 4. CDU 가동률 원인 분석 관련 질문
         if (query.toLowerCase().includes("cdu") && query.toLowerCase().includes("가동률") && (query.toLowerCase().includes("이유") || query.toLowerCase().includes("원인"))) {
           searchResults.push({
             source: "CDU-Dashboard",
@@ -174,8 +164,6 @@ function SearchResultDisplay({ query }: { query: string }) {
             link: "#",
           });
         }
-
-        // 5. BOP 제품 단가 비교 관련 질문
         if (query.toLowerCase().includes("bop") && (query.toLowerCase().includes("단가") || query.toLowerCase().includes("가격"))) {
           searchResults.push({
             source: "BOP-Pricing",
@@ -186,13 +174,28 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         setMockSearchResults(searchResults);
-        
-        // 3. Generate Draft Answer and transition to final step
-        const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
-        const answerResult = await generateDraftAnswer({ query, searchResults: searchResultsText });
-        if (isCancelled) return;
-        setDraftAnswer(answerResult.answer);
         setWorkflowStatus("confirming");
+        
+        // 3. Generate Draft Answer
+        const searchResultsText = searchResults.map(r => `Source: ${r.source}\nTitle: ${r.title}\nSnippet: ${r.snippet}`).join('\n\n');
+        
+        const stream = await generateDraftAnswerStream({ query, searchResults: searchResultsText });
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        
+        let done = false;
+        while (!done) {
+          if(isCancelled) {
+            reader.cancel();
+            break;
+          }
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            setDraftAnswer(prev => (prev || "") + chunk);
+          }
+        }
 
       } catch (e) {
         if (isCancelled) return;
@@ -222,20 +225,18 @@ function SearchResultDisplay({ query }: { query: string }) {
     };
     const currentStep = statusMap[workflowStatus];
     
-    if (workflowStatus === 'error' && step === currentStep - 1 ) {
-        // Find which step failed. Analyzing is step 1, searching is 2.
-        if (intentData === null) return 'error'; // Analyzing failed
-        if (mockSearchResults.length === 0) return 'error'; // Searching failed
-        if (draftAnswer === null) return 'error'; // Generating failed (now part of confirming)
+    if (workflowStatus === 'error' && currentStep > 1 && step === currentStep - 1 ) {
+        if (!intentData) return 'error'; 
+        if (mockSearchResults.length === 0) return 'error'; 
     }
     
-    // ✅ 이 줄을 추가하세요
-    if (step === 3 && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) {
+    if (step < currentStep) return "complete";
+
+    if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted') return "loading";
+
+    if(step === 3 && (workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted')) {
       return 'complete';
     }
-
-    if (step < currentStep) return "complete";
-    if (step === currentStep && workflowStatus !== 'error' && workflowStatus !== 'feedback_submitted') return "loading";
 
     return "pending";
   };
@@ -247,7 +248,7 @@ function SearchResultDisplay({ query }: { query: string }) {
       
       <div className="relative">
         <div className="absolute left-[21px] top-4 bottom-4 w-0.5 bg-border -z-10"></div>
-        <WorkflowStep title="Analyzing Intent" status={getStepStatus(1)} isVisible={workflowStatus !== 'error'}>
+        <WorkflowStep title="Analyzing Intent" status={getStepStatus(1)} isVisible={true}>
           {intentData ? (
             <div>
               <p className="font-semibold">{intentData.intent}</p>
@@ -258,10 +259,12 @@ function SearchResultDisplay({ query }: { query: string }) {
                 ))}
               </div>
             </div>
-          ) : <Skeleton className="h-12 w-full" />}
+          ) : getStepStatus(1) === 'loading' ? (
+            <Skeleton className="h-12 w-full" />
+          ) : null}
         </WorkflowStep>
 
-        <WorkflowStep title="Searching Data Sources" status={getStepStatus(2)} isVisible={getStepStatus(1) === 'complete' && workflowStatus !== 'error'}>
+        <WorkflowStep title="Searching Data Sources" status={getStepStatus(2)} isVisible={getStepStatus(1) === 'complete'}>
           <div className="space-y-4">
             {mockSearchResults.length > 0 ? (
               mockSearchResults.map((result, index) => {
@@ -276,50 +279,58 @@ function SearchResultDisplay({ query }: { query: string }) {
                   </div>
                 );
               })
-            ) : (
-              intentData?.dataSources.map(source => <Skeleton key={source} className="h-16 w-full" />)
-            )}
+            ) : getStepStatus(2) === 'loading' ? (
+              (intentData?.dataSources || [1,2]).map((_, index) => <Skeleton key={index} className="h-16 w-full" />)
+            ) : null}
           </div>
         </WorkflowStep>
         
         <WorkflowStep title="Final Answer & Confirmation" status={getStepStatus(3)} isVisible={getStepStatus(2) === 'complete' || workflowStatus === 'feedback_submitted'}>
-          {draftAnswer ? (
+          {draftAnswer !== null ? (
             <>
-              <div className="prose prose-sm max-w-none text-card-foreground">{draftAnswer}</div>
-              <Separator className="my-6" />
-              <div>
-                <p className="text-sm font-semibold mb-3">Sources:</p>
-                <div className="space-y-3">
-                  {mockSearchResults.map((result, index) => {
-                    const Icon = sourceIcons[result.source] || sourceIcons.default;
-                    return (
-                      <a href={result.link} key={index} className="flex items-center gap-3 group text-sm">
-                        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors"/>
-                        <span className="flex-1 group-hover:text-primary transition-colors">{result.title}</span>
-                        <span className="text-muted-foreground text-xs">{result.updated}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground"/>
-                      </a>
-                    )
-                  })}
-                </div>
+              <div className="prose prose-sm max-w-none text-card-foreground">
+                {draftAnswer}
+                {getStepStatus(3) === 'loading' && <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-1"></span>}
               </div>
-              <CardFooter className="mt-8 -mb-2 -mx-2">
-                {workflowStatus === 'feedback_submitted' ? (
-                  <div className="w-full text-center flex items-center justify-center gap-2 p-4 bg-green-50 rounded-lg text-green-700">
-                    <CheckCircle2 className="h-5 w-5" />
-                    <p className="font-medium">Thank you for your feedback!</p>
-                  </div>
-                ) : (
-                  <div className="w-full flex flex-col sm:flex-row items-center gap-4">
-                    <p className="font-semibold">Was this answer helpful?</p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleFeedback('yes')}><ThumbsUp className="mr-2"/> Yes</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleFeedback('no')}><ThumbsDown className="mr-2"/> No</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleFeedback('partial')}><MessageCircleQuestion className="mr-2"/> Partially</Button>
+              
+              {(workflowStatus === 'confirming' || workflowStatus === 'feedback_submitted') && draftAnswer && (
+                <>
+                  <Separator className="my-6" />
+                  <div>
+                    <p className="text-sm font-semibold mb-3">Sources:</p>
+                    <div className="space-y-3">
+                      {mockSearchResults.map((result, index) => {
+                        const Icon = sourceIcons[result.source] || sourceIcons.default;
+                        return (
+                          <a href={result.link} key={index} className="flex items-center gap-3 group text-sm">
+                            <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors"/>
+                            <span className="flex-1 group-hover:text-primary transition-colors">{result.title}</span>
+                            <span className="text-muted-foreground text-xs">{result.updated}</span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground"/>
+                          </a>
+                        )
+                      })}
                     </div>
                   </div>
-                )}
-              </CardFooter>
+                  <CardFooter className="mt-8 -mb-2 -mx-2">
+                    {workflowStatus === 'feedback_submitted' ? (
+                      <div className="w-full text-center flex items-center justify-center gap-2 p-4 bg-green-50 rounded-lg text-green-700">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <p className="font-medium">Thank you for your feedback!</p>
+                      </div>
+                    ) : (
+                      <div className="w-full flex flex-col sm:flex-row items-center gap-4">
+                        <p className="font-semibold">Was this answer helpful?</p>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleFeedback('yes')}><ThumbsUp className="mr-2"/> Yes</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleFeedback('no')}><ThumbsDown className="mr-2"/> No</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleFeedback('partial')}><MessageCircleQuestion className="mr-2"/> Partially</Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardFooter>
+                </>
+              )}
             </>
           ) : (
              <Skeleton className="h-24 w-full" />
@@ -352,9 +363,9 @@ function SearchPage() {
         <div className="container flex h-20 items-center justify-between mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
-            {/* <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
+            <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
               AiU Link
-            </span> */}
+            </span>
           </Link>
           <div className="flex-1 max-w-2xl">
             <SearchBar initialQuery={query} />
