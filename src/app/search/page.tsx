@@ -1,7 +1,7 @@
 "use client";
 
 import { analyzeSearchIntent, AnalyzeSearchIntentOutput } from "@/ai/flows/analyze-search-intent";
-import { generateDraftAnswerStream } from "@/ai/flows/generate-draft-answer";
+import { generateDraftAnswer, generateDraftAnswerStream } from "@/ai/flows/generate-draft-answer";
 import { Icons } from "@/components/icons";
 import { SearchBar } from "@/components/search-bar";
 import { Badge } from "@/components/ui/badge";
