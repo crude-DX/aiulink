@@ -171,6 +171,7 @@ function SearchResultDisplay({ query }: { query: string }) {
           });
         }
         if (query.toLowerCase().includes("bop") && (query.toLowerCase().includes("단가") || query.toLowerCase().includes("가격"))) {
+          searchResults = [];
           searchResults.push({
             source: "BOP-Pricing",
             title: "BOP-150N 단가 비교 분석",
@@ -385,3 +386,5 @@ export default function SuspendedSearchPage() {
     </Suspense>
   )
 }
+
+    
