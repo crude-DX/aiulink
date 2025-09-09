@@ -364,7 +364,6 @@ function SearchPage() {
           <Link href="/" className="flex items-center gap-2 mr-4">
             <Icons.logo className="h-8 w-8 text-primary" />
             <span className="hidden sm:inline-block text-xl font-bold font-headline text-[rgb(0,153,153)]">
-              AiU Link
             </span>
           </Link>
           <div className="flex-1 max-w-2xl">

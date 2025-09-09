@@ -23,17 +23,18 @@ const GenerateDraftAnswerOutputSchema = z.object({
 });
 export type GenerateDraftAnswerOutput = z.infer<typeof GenerateDraftAnswerOutputSchema>;
 
-const generateDraftAnswerPrompt = `You are an AI assistant that generates a draft answer based on the search results for a given query.
+const generateDraftAnswerPrompt = `You are an AI assistant. Your primary goal is to answer the user's query directly and accurately.
+Use the provided Search Results as context to formulate your answer.
 
-  Query: {{{query}}}
-  Search Results: {{{searchResults}}}
+User Query: {{{query}}}
+Search Results:
+{{{searchResults}}}
 
-  Generate a concise and informative answer based on the search results. The answer should be in Korean.
-  Do not include any source information or links in the answer.
-  Do not include any introductory or concluding sentences.
-  Focus on answering the question directly.
-  If the search results are irrelevant, state that you cannot answer the question with the provided information.
-  `;
+Based on the User Query, generate a concise and informative answer in Korean using only the information from the Search Results.
+- Answer the User Query precisely.
+- Do not include any introductory or concluding remarks.
+- Do not include source information or links.
+- If the Search Results are irrelevant to the User Query, state that you cannot answer the question with the provided information.`;
 
 export async function generateDraftAnswer(input: GenerateDraftAnswerInput): Promise<GenerateDraftAnswerOutput> {
   const {output} = await ai.generate({
